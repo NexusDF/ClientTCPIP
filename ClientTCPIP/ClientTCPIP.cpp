@@ -82,6 +82,7 @@ int __cdecl main(int argc, char** argv)
 		return 1;
 	}
 	char msg[256];
+	std::string name;
 	int msg_size;
 	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 		// Attempt to connect to an address until one succeeds
@@ -92,6 +93,11 @@ int __cdecl main(int argc, char** argv)
 		}
 		recv(Connection, msg, sizeof(msg), NULL);
 		printf(msg);
+		std::getline(std::cin, name);
+		int name_size = name.size();
+		send(Connection, (char*)&name_size, sizeof(int), NULL);
+		send(Connection, name.c_str(), name_size, NULL);
+		
 
 		CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ClientHandler, NULL, NULL, NULL);
 
