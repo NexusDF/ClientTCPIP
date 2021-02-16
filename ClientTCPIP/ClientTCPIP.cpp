@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <string>
 
 
 // Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
@@ -21,17 +22,29 @@
 #define DEFAULT_PORT "27015"
 
 SOCKET Connection;
+int result;
+
+char* CreateDynamicString(int size) {
+	char* str = new char[size + 1];
+	str[size] = '\0';
+	return str;
+}
 
 void ClientHandler() {
 	int msg_size;
-	recv(Connection, (char*)&msg_size, sizeof(int), NULL);
 	while (true) {
-		char* msg = new char[msg_size + 1];
-		msg[msg_size] = '\0';
-		recv(Connection, msg, msg_size, NULL);
+		result = recv(Connection, (char*)&msg_size, sizeof(int), NULL);
+		if (result <= 0) break;
+
+		char* msg = CreateDynamicString(msg_size);
+		result = recv(Connection, msg, msg_size, NULL);
+		if (result <= 0) break;
+
 		std::cout << msg << std::endl;
 		delete[] msg;
 	}
+	printf("Lost connection\n");
+	shutdown(Connection, SD_SEND);
 }
 
 int __cdecl main(int argc, char** argv)
@@ -69,7 +82,6 @@ int __cdecl main(int argc, char** argv)
 		return 1;
 	}
 	char msg[256];
-	char name[256];
 	int msg_size;
 	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 		// Attempt to connect to an address until one succeeds
@@ -78,19 +90,14 @@ int __cdecl main(int argc, char** argv)
 			printf("Error: failed connect to server.\n");
 			return 1;
 		}
-		std::cout << "Connected!\n";
-
 		recv(Connection, msg, sizeof(msg), NULL);
 		printf(msg);
-		std::cin.getline(name, sizeof(name));
-		send(Connection, name, sizeof(name), NULL);
 
 		CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ClientHandler, NULL, NULL, NULL);
 
 		std::string msg;
 		while (true) {
-			std::cout << name << ": ";
-			std::cin >> msg;
+			std::getline(std::cin, msg);
 			int msg_size = msg.size();
 			send(Connection, (char*)&msg_size, sizeof(int), NULL);
 			send(Connection, msg.c_str(), msg_size, NULL);
